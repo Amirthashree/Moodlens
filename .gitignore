@@ -1,6 +1,31 @@
+# Dependencies
 node_modules/
+backend/node_modules/
+
+# Environment
 backend/.env
-*.pkl
-*.pyc
+.env
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+
+# ML Models & large files
+*.pkl
+*.pt
+*.joblib
+models/
+emotion_tracker/models/
+
+# Datasets (too large for git)
+*.csv
+*.xlsx
+*.txt
+emotion_tracker/datasets/
+emotion_tracker/extra_datasets/
+
+# Misc
 .DS_Store
+*.png
+EDA_Report.png
