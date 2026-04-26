@@ -1,4 +1,4 @@
-"""
+﻿"""
 MoodLens Flask API
 Wraps your existing emotion_model.pkl so server.js can call it.
 Run: python flask_api.py
@@ -14,24 +14,24 @@ import json
 app = Flask(__name__)
 CORS(app)
 
-# ── Paths (same as your app.py) ──
+# â”€â”€ Paths (same as your app.py) â”€â”€
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR  = os.path.join(BASE_DIR, "models")
 MODEL_PATH = os.path.join(MODEL_DIR, "emotion_model.pkl")
 META_PATH  = os.path.join(MODEL_DIR, "model_metadata.json")
 
-# ── Load model ──
+# â”€â”€ Load model â”€â”€
 model    = None
 metadata = {}
 
 if os.path.exists(MODEL_PATH):
     try:
         model = joblib.load(MODEL_PATH)
-        print("✅ ML model loaded:", MODEL_PATH)
+        print("âœ… ML model loaded:", MODEL_PATH)
     except Exception as e:
-        print("❌ Failed to load model:", e)
+        print("âŒ Failed to load model:", e)
 else:
-    print("⚠️  No model found at", MODEL_PATH, "— will use rule-based fallback")
+    print("âš ï¸  No model found at", MODEL_PATH, "â€” will use rule-based fallback")
 
 if os.path.exists(META_PATH):
     try:
@@ -40,7 +40,7 @@ if os.path.exists(META_PATH):
     except Exception:
         pass
 
-# ── Rule-based fallback (copied from your app.py logic) ──
+# â”€â”€ Rule-based fallback (copied from your app.py logic) â”€â”€
 KEYWORD_RULES = {
     "Happy":      ["love", "great", "excellent", "amazing", "wonderful", "fantastic",
                    "happy", "satisfied", "perfect", "awesome", "thank", "best"],
@@ -81,7 +81,7 @@ def extract_keywords(text, emotion):
                 found.append(kw)
     return found[:5]  # max 5 keywords
 
-# ── Routes ──
+# â”€â”€ Routes â”€â”€
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -121,9 +121,6 @@ def predict():
         "model_used": "ml_model" if model else "rule_based"
     })
 
-if __name__ == '__main__':
-    print("🐍 MoodLens Python API running on http://localhost:5001")
-    app.run(port=5001, debug=False)
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5001))
