@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodLens — Customer Emotion Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --happy:       #2ECC71;
+      --angry:       #E74C3C;
+      --frustrated:  #E67E22;
+      --sad:         #3498DB;
+      --excited:     #9B59B6;
+      --neutral:     #95A5A6;
+      --bg:          #0D0D10;
+      --surface:     #15151A;
+      --surface2:    #1C1C24;
+      --border:      rgba(255,255,255,0.08);
+      --border2:     rgba(255,255,255,0.14);
+      --text:        #F0EEF8;
+      --muted:       #8C8A9A;
+      --accent:      #7C6EF5;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ══════════════ AUTH SCREEN ══════════════ */
+    #authScreen {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .auth-brand {
+      background: linear-gradient(135deg, #0D0D10 0%, #13121E 60%, #1a1530 100%);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 4rem;
+      position: relative; overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+    .auth-brand::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(124,110,245,0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(52,152,219,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .auth-brand-logo {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 1.6rem; letter-spacing: -0.02em;
+      margin-bottom: 3rem; position: relative;
+    }
+    .auth-brand-logo .icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #7C6EF5, #3498DB);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .auth-brand-logo span { color: var(--accent); }
+    .auth-headline {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 2.8rem; line-height: 1.1; letter-spacing: -0.04em;
+      margin-bottom: 1.25rem; position: relative;
+    }
+    .auth-headline em { font-style: normal; color: var(--accent); }
+    .auth-sub {
+      color: var(--muted); font-size: 1rem; line-height: 1.7;
+      max-width: 380px; margin-bottom: 3rem; position: relative;
+    }
+    .auth-stats {
+      display: flex; gap: 2.5rem; position: relative;
+    }
+    .auth-stat-val {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 1.6rem; color: var(--text);
+    }
+    .auth-stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    .float-pills {
+      position: absolute; right: -20px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .float-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 24px; padding: 0.5rem 1rem;
+      font-size: 0.82rem; white-space: nowrap;
+      animation: floatIn 0.6s ease both;
+    }
+    .float-pill:nth-child(1){animation-delay:0.1s} .float-pill:nth-child(2){animation-delay:0.2s}
+    .float-pill:nth-child(3){animation-delay:0.3s} .float-pill:nth-child(4){animation-delay:0.4s}
+    .float-pill:nth-child(5){animation-delay:0.5s} .float-pill:nth-child(6){animation-delay:0.6s}
+    @keyframes floatIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+
+    .auth-form-panel {
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 3rem 2rem;
+    }
+    .auth-form-wrap { width: 100%; max-width: 400px; }
+    .auth-tabs {
+      display: flex; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 4px; margin-bottom: 2rem;
+    }
+    .auth-tab {
+      flex: 1; background: none; border: none;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+      color: var(--muted); padding: 0.6rem;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .auth-tab.active {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .auth-form-title {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 1.5rem; margin-bottom: 0.35rem;
+    }
+    .auth-form-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 1.75rem; }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    .field input {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; padding: 0.75rem 1rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); }
+
+    .auth-btn {
+      width: 100%; background: var(--accent);
+      border: none; border-radius: 10px; color: #fff;
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.95rem; padding: 0.85rem;
+      cursor: pointer; transition: all 0.2s; margin-top: 0.5rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .auth-btn:active { transform: none; }
+    .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .auth-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 1.25rem 0; color: var(--muted); font-size: 0.78rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .auth-error {
+      background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      color: #e74c3c; font-size: 0.85rem; margin-bottom: 1rem;
+      display: none;
+    }
+    .auth-success {
+      background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.3);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      color: #2ECC71; font-size: 0.85rem; margin-bottom: 1rem;
+      display: none;
+    }
+
+    /* ══════════════ APP SHELL ══════════════ */
+    #appShell { display: none; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+      background: rgba(13,13,16,0.88);
+      backdrop-filter: blur(16px); z-index: 100;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 1.25rem; letter-spacing: -0.02em;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: linear-gradient(135deg, #7C6EF5, #3498DB);
+      display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+    }
+    .logo span { color: var(--accent); }
+
+    nav { display: flex; gap: 0.2rem; }
+    nav button {
+      background: none; border: none; cursor: pointer;
+      padding: 0.4rem 0.9rem; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.86rem;
+      color: var(--muted); transition: all 0.2s;
+    }
+    nav button:hover { color: var(--text); background: var(--surface2); }
+    nav button.active {
+      color: var(--text); background: var(--surface2);
+      border: 1px solid var(--border2);
+    }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 0.3rem 0.9rem;
+      font-size: 0.82rem; color: var(--muted);
+    }
+    .user-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; font-size: 0.68rem; font-weight: 700; color: #fff;
+    }
+    .logout-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--muted);
+      padding: 0.35rem 0.8rem; font-size: 0.8rem;
+      cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: var(--angry); color: var(--angry); }
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(44,204,113,0.1); border: 1px solid rgba(44,204,113,0.25);
+      border-radius: 20px; padding: 0.28rem 0.8rem;
+      font-size: 0.76rem; color: #2ECC71;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ECC71; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ══════════════ PAGES ══════════════ */
+    .page { display: none; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+    /* ── Analyze ── */
+    .analyze-layout {
+      display: grid; grid-template-columns: 1fr 400px;
+      gap: 1.5rem; padding: 2rem 2.5rem;
+      max-width: 1400px; margin: 0 auto;
+      min-height: calc(100vh - 64px);
+    }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 1.75rem;
+    }
+    .panel-title {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 1.25rem;
+    }
+    textarea {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: 1rem; line-height: 1.65; padding: 1.1rem 1.25rem;
+      resize: vertical; min-height: 190px; outline: none; transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    .samples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
+    .sample-chip {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 0.3rem 0.85rem;
+      font-size: 0.76rem; color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .sample-chip:hover { border-color: var(--border2); color: var(--text); }
+
+    .analyze-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; margin-top: 1.1rem;
+      background: var(--accent); border: none; border-radius: 12px;
+      color: #fff; font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.95rem; padding: 0.85rem; cursor: pointer; transition: all 0.2s;
+    }
+    .analyze-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .analyze-btn:active { transform: none; }
+    .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .result-empty {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; gap: 1rem; color: var(--muted); padding: 2rem;
+    }
+    .result-empty .big-icon { font-size: 2.8rem; opacity: 0.3; }
+
+    .emotion-badge {
+      display: flex; align-items: center; gap: 14px;
+      padding: 1.2rem; border-radius: 14px;
+      border: 1px solid var(--e-color, var(--border));
+      background: color-mix(in srgb, var(--e-color, transparent) 8%, var(--surface2));
+      margin-bottom: 1.15rem;
+    }
+    .emotion-icon { font-size: 2.4rem; }
+    .emotion-name {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 1.8rem; letter-spacing: -0.02em;
+      color: var(--e-color, var(--text));
+    }
+    .emotion-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .conf-bar-wrap { margin-bottom: 1.1rem; }
+    .conf-label { display: flex; justify-content: space-between; font-size: 0.79rem; color: var(--muted); margin-bottom: 5px; }
+    .conf-track { height: 6px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+    .conf-fill { height: 100%; border-radius: 10px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1.1rem; }
+    .meta-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 11px; padding: 0.85rem;
+    }
+    .meta-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .meta-value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+    .churn-low { color: var(--happy); } .churn-med { color: var(--frustrated); } .churn-high { color: var(--angry); }
+
+    .suggestion-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 11px; padding: 0.9rem 1rem;
+    }
+    .suggestion-box .sug-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+    .suggestion-box p { font-size: 0.88rem; line-height: 1.6; }
+
+    .save-indicator {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; color: var(--happy); margin-top: 0.75rem;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .save-indicator.show { opacity: 1; }
+
+    .loading-dots { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 2rem; }
+    .loading-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+    .loading-dots span:nth-child(2){animation-delay:0.2s} .loading-dots span:nth-child(3){animation-delay:0.4s}
+    @keyframes bounce { 0%,100%{transform:translateY(0);opacity:0.4} 50%{transform:translateY(-8px);opacity:1} }
+
+    /* ── Dashboard ── */
+    .dashboard-layout { padding: 2rem 2.5rem; max-width: 1400px; margin: 0 auto; }
+    .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.4rem 1.5rem; }
+    .stat-label { font-size: 0.77rem; color: var(--muted); margin-bottom: 6px; }
+    .stat-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2rem; }
+    .stat-change { font-size: 0.77rem; margin-top: 4px; }
+    .pos { color: var(--happy); } .neg { color: var(--angry); }
+
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.4rem 1.5rem; }
+    .chart-panel h3 { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+    .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; }
+    .bar-label { width: 90px; font-size: 0.78rem; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 9px; background: var(--surface2); border-radius: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 8px; }
+    .bar-pct { font-size: 0.76rem; color: var(--muted); width: 32px; text-align: right; }
+
+    .donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    .recent-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.4rem 1.5rem; }
+    .recent-panel h3 { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; margin-bottom: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); text-align: left; padding: 0 0 11px; }
+    td { padding: 9px 0; border-top: 1px solid var(--border); font-size: 0.84rem; }
+    .emotion-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500;
+    }
+
+    /* ── History ── */
+    .history-layout { padding: 2rem 2.5rem; max-width: 860px; margin: 0 auto; }
+    .history-layout h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.7rem; margin-bottom: 0.5rem; }
+    .history-layout .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 1.5rem; }
+    .hist-empty { text-align: center; padding: 4rem; color: var(--muted); }
+    .hist-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 13px; padding: 1rem 1.25rem; margin-bottom: 0.7rem;
+      display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start;
+    }
+    .hist-text { font-size: 0.87rem; color: #D0CDE0; line-height: 1.5; margin-bottom: 5px; }
+    .hist-time { font-size: 0.74rem; color: var(--muted); }
+    .hist-right { text-align: right; }
+    .clear-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--muted); padding: 0.38rem 0.85rem; font-size: 0.79rem;
+      cursor: pointer; margin-bottom: 1rem; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--angry); color: var(--angry); }
+
+    /* ── About ── */
+    .about-layout { padding: 2rem 2.5rem; max-width: 820px; margin: 0 auto; }
+    .about-layout h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    .about-layout .tagline { color: var(--muted); font-size: 1rem; margin-bottom: 2.5rem; }
+    .about-section { margin-bottom: 2rem; }
+    .about-section h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.7rem; }
+    .about-section p { font-size: 0.92rem; color: #C4C2D0; line-height: 1.75; }
+    .model-table { width: 100%; border-collapse: collapse; margin-top: 0.7rem; }
+    .model-table th { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: left; padding-bottom: 10px; }
+    .model-table td { padding: 9px 0; border-top: 1px solid var(--border); font-size: 0.84rem; }
+    .acc-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.77rem; font-weight: 600; }
+    .emotion-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
+    .emo-chip { display: flex; align-items: center; gap: 6px; padding: 0.38rem 0.85rem; border-radius: 20px; border: 1px solid var(--border); font-size: 0.81rem; }
+    .emo-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .spinner { width: 17px; height: 17px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .error-box { background: rgba(231,76,60,0.08); border: 1px solid rgba(231,76,60,0.25); border-radius: 11px; padding: 0.9rem; color: #e74c3c; font-size: 0.87rem; line-height: 1.6; margin-top: 0.75rem; }
+
+    @media (max-width: 900px) {
+      #authScreen { grid-template-columns: 1fr; }
+      .auth-brand { display: none; }
+      .analyze-layout { grid-template-columns: 1fr; }
+      .dash-grid { grid-template-columns: 1fr 1fr; }
+      .chart-row { grid-template-columns: 1fr; }
+      header { padding: 1rem 1.25rem; }
+      .analyze-layout, .dashboard-layout, .about-layout, .history-layout { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ AUTH SCREEN ══════════════════ -->
+<div id="authScreen">
+  <div class="auth-brand">
+    <div class="auth-brand-logo"><div class="icon">🔮</div>Mood<span>Lens</span></div>
+    <div class="auth-headline">Decode every <em>emotion</em> your customers feel</div>
+    <div class="auth-sub">AI-powered text emotion detection across 6 categories — Happy, Angry, Frustrated, Sad, Excited, and Neutral — with churn risk assessment and actionable insights.</div>
+    <div class="auth-stats">
+      <div><div class="auth-stat-val">6</div><div class="auth-stat-label">Emotion Classes</div></div>
+      <div><div class="auth-stat-val">100%</div><div class="auth-stat-label">Model F1 Score</div></div>
+      <div><div class="auth-stat-val">20K+</div><div class="auth-stat-label">Training Samples</div></div>
+    </div>
+    <div class="float-pills">
+      <div class="float-pill"><span style="color:#2ECC71">😊</span> Happy · 94% conf</div>
+      <div class="float-pill"><span style="color:#E74C3C">😠</span> Angry · 97% conf</div>
+      <div class="float-pill"><span style="color:#9B59B6">🤩</span> Excited · 91% conf</div>
+      <div class="float-pill"><span style="color:#E67E22">😤</span> Frustrated · 89%</div>
+      <div class="float-pill"><span style="color:#3498DB">😢</span> Sad · 93% conf</div>
+      <div class="float-pill"><span style="color:#95A5A6">😐</span> Neutral · 96%</div>
+    </div>
+  </div>
+
+  <div class="auth-form-panel">
+    <div class="auth-form-wrap">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Sign in</button>
+        <button class="auth-tab" onclick="switchTab('register')">Create account</button>
+      </div>
+
+      <div id="authError" class="auth-error"></div>
+      <div id="authSuccess" class="auth-success"></div>
+
+      <div id="loginForm">
+        <div class="auth-form-title">Welcome back</div>
+        <div class="auth-form-sub">Sign in to your MoodLens account</div>
+        <div class="field"><label>Email address</label><input type="email" id="loginEmail" placeholder="you@example.com" /></div>
+        <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
+        <button class="auth-btn" id="loginBtn" onclick="handleLogin()">
+          <span id="loginBtnText">Sign in →</span>
+        </button>
+      </div>
+
+      <div id="registerForm" style="display:none;">
+        <div class="auth-form-title">Create account</div>
+        <div class="auth-form-sub">Join MoodLens and start analysing emotions</div>
+        <div class="field"><label>Full name</label><input type="text" id="regName" placeholder="Amirtha Shree" /></div>
+        <div class="field"><label>Email address</label><input type="email" id="regEmail" placeholder="you@example.com" /></div>
+        <div class="field"><label>Password</label><input type="password" id="regPassword" placeholder="Min. 8 characters" /></div>
+        <div class="field"><label>Confirm password</label><input type="password" id="regConfirm" placeholder="••••••••" /></div>
+        <button class="auth-btn" id="registerBtn" onclick="handleRegister()">
+          <span id="registerBtnText">Create account →</span>
+        </button>
+      </div>
+
+      <div class="auth-divider">backend config</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">API Base URL</div>
+        <code style="font-size:0.78rem;color:var(--accent);">http://localhost:5000/api</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ APP SHELL ══════════════════ -->
+<div id="appShell">
+  <header>
+    <div class="logo"><div class="logo-icon">🔮</div>Mood<span>Lens</span></div>
+    <nav>
+      <button class="active" onclick="showPage('analyze', this)">Analyze</button>
+      <button onclick="showPage('dashboard', this)">Dashboard</button>
+      <button onclick="showPage('history', this)">History</button>
+      <button onclick="showPage('about', this)">About</button>
+    </nav>
+    <div class="header-right">
+      <div class="status-pill"><div class="status-dot"></div>Model ready</div>
+      <div class="user-chip">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <span id="userName">User</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- ANALYZE -->
+  <div id="page-analyze" class="page active">
+    <div class="analyze-layout">
+      <div>
+        <div class="panel" style="margin-bottom:1.5rem;">
+          <div class="panel-title">Customer feedback text</div>
+          <textarea id="inputText" placeholder="Paste a customer review, support message, or social mention here…"></textarea>
+          <div class="samples">
+            <span style="font-size:0.76rem;color:var(--muted);align-self:center;">Try:</span>
+            <span class="sample-chip" onclick="setExample('I love this product! Everything works perfectly and the support team is amazing!')">Happy</span>
+            <span class="sample-chip" onclick="setExample('This is absolutely unacceptable! My order has been wrong THREE times and nobody cares!')">Angry</span>
+            <span class="sample-chip" onclick="setExample('I have been waiting for 2 weeks and still no update on my refund. Very frustrated.')">Frustrated</span>
+            <span class="sample-chip" onclick="setExample('The item I ordered is discontinued. I am really sad about this, it was my favorite.')">Sad</span>
+            <span class="sample-chip" onclick="setExample('Just got early access to the new feature — this is incredible, I am so excited!!')">Excited</span>
+            <span class="sample-chip" onclick="setExample('The package arrived on Tuesday as expected. Contents appear to be as described.')">Neutral</span>
+          </div>
+          <button class="analyze-btn" id="analyzeBtn" onclick="analyzeText()">
+            <span id="btnContent">Detect Emotion →</span>
+          </button>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Pipeline</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;text-align:center;">
+            <div><div style="font-size:1.4rem;margin-bottom:4px;">📝</div><div style="font-size:0.7rem;color:var(--muted);">Preprocessing</div><div style="font-size:0.76rem;margin-top:2px;">Lowercase · Strip tags</div></div>
+            <div><div style="font-size:1.4rem;margin-bottom:4px;">🔢</div><div style="font-size:0.7rem;color:var(--muted);">TF-IDF</div><div style="font-size:0.76rem;margin-top:2px;">12K features · 1–3 grams</div></div>
+            <div><div style="font-size:1.4rem;margin-bottom:4px;">🧠</div><div style="font-size:0.7rem;color:var(--muted);">Naive Bayes</div><div style="font-size:0.76rem;margin-top:2px;">Best model · F1 1.00</div></div>
+            <div><div style="font-size:1.4rem;margin-bottom:4px;">📊</div><div style="font-size:0.7rem;color:var(--muted);">Output</div><div style="font-size:0.76rem;margin-top:2px;">Emotion · Confidence</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="resultPanel" style="position:sticky;top:72px;height:fit-content;">
+        <div class="panel-title">Analysis result</div>
+        <div id="resultContent">
+          <div class="result-empty">
+            <div class="big-icon">🎭</div>
+            <p style="font-size:0.88rem;">Enter customer feedback and click Detect Emotion</p>
+          </div>
+        </div>
+        <div class="save-indicator" id="saveIndicator">✓ Saved to your history</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page">
+    <div class="dashboard-layout">
+      <div class="dash-grid">
+        <div class="stat-card"><div class="stat-label">Total Analyses</div><div class="stat-value" id="d-total">0</div><div class="stat-change pos">Your session</div></div>
+        <div class="stat-card"><div class="stat-label">Positive Rate</div><div class="stat-value" id="d-pos">—</div><div class="stat-change">Happy + Excited</div></div>
+        <div class="stat-card"><div class="stat-label">Avg. Confidence</div><div class="stat-value" id="d-conf">—</div><div class="stat-change">Model certainty</div></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-panel"><h3>Emotion distribution</h3><div class="bar-chart" id="barChart"><div style="color:var(--muted);font-size:0.84rem;">No data yet.</div></div></div>
+        <div class="chart-panel">
+          <h3>Sentiment split</h3>
+          <div class="donut-wrap">
+            <svg width="130" height="130" id="donutSvg" viewBox="0 0 130 130">
+              <circle cx="65" cy="65" r="50" fill="none" stroke="#1C1C24" stroke-width="18"/>
+              <text x="65" y="70" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="20" fill="#8C8A9A">—</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--happy)"></div>Positive</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--angry)"></div>Negative</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--neutral)"></div>Neutral</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="recent-panel"><h3>Recent analyses</h3><div id="recentTable"><div style="color:var(--muted);font-size:0.84rem;padding:1rem 0;">No analyses yet.</div></div></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="page-history" class="page">
+    <div class="history-layout">
+      <h1>Analysis history</h1>
+      <div class="sub">Your saved analyses — synced from MongoDB</div>
+      <div id="historyContent"><div class="hist-empty">Nothing analysed yet in this session.</div></div>
+    </div>
+  </div>
+
+  <!-- ABOUT -->
+  <div id="page-about" class="page">
+    <div class="about-layout">
+      <h1>About MoodLens</h1>
+      <p class="tagline">AI-powered customer emotion intelligence — Meenakshi Sundararajan Engineering College, Chennai · U24IT401</p>
+      <div class="about-section"><h2>Emotion categories</h2>
+        <div class="emotion-chips">
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--happy)"></div>Happy</div>
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--angry)"></div>Angry</div>
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--frustrated)"></div>Frustrated</div>
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--sad)"></div>Sad</div>
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--excited)"></div>Excited</div>
+          <div class="emo-chip"><div class="emo-dot" style="background:var(--neutral)"></div>Neutral</div>
+        </div>
+      </div>
+      <div class="about-section"><h2>Model performance</h2>
+        <table class="model-table">
+          <thead><tr><th>Model</th><th>Accuracy</th><th>F1 Score</th><th>CV Score</th></tr></thead>
+          <tbody>
+            <tr><td>Logistic Regression</td><td><span class="acc-badge" style="background:rgba(44,204,113,0.12);color:#2ECC71;">98.83%</span></td><td>0.9883</td><td>99.85%</td></tr>
+            <tr><td><strong>Naive Bayes</strong> ⭐</td><td><span class="acc-badge" style="background:rgba(44,204,113,0.2);color:#2ECC71;">100.00%</span></td><td>1.0000</td><td>99.85%</td></tr>
+            <tr><td>Linear SVM</td><td><span class="acc-badge" style="background:rgba(44,204,113,0.12);color:#2ECC71;">98.83%</span></td><td>0.9883</td><td>99.85%</td></tr>
+            <tr><td>PyTorch Neural Net</td><td><span class="acc-badge" style="background:rgba(155,89,182,0.15);color:#9B59B6;">85–93%</span></td><td>~0.88</td><td>Real-world</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="about-section"><h2>Team</h2><p>Amirtha Shree L · Harshawardhini M G · Mahalakshmi P<br/>Course U24IT401 – AI & ML · Academic Year 2024–25</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const API_BASE = 'http://localhost:5000/api';
+
+// ── STATE ──
+let currentUser = null;
+let token = localStorage.getItem('ml_token');
+
+const EMOTIONS = {
+  Happy:      { emoji:'😊', color:'#2ECC71', churn:'Low',    desc:'Positive satisfaction, delight, gratitude' },
+  Angry:      { emoji:'😠', color:'#E74C3C', churn:'High',   desc:'Strong negative reaction, outrage, hostility' },
+  Frustrated: { emoji:'😤', color:'#E67E22', churn:'High',   desc:'Repeated issues, unresolved problems, annoyance' },
+  Sad:        { emoji:'😢', color:'#3498DB', churn:'Medium', desc:'Disappointment, regret, low mood' },
+  Excited:    { emoji:'🤩', color:'#9B59B6', churn:'Low',    desc:'High positive energy, enthusiasm, delight' },
+  Neutral:    { emoji:'😐', color:'#95A5A6', churn:'Low',    desc:'Factual, informational, no strong emotion' },
+};
+const SUGGESTIONS = {
+  Happy:      'Send a thank-you note and invite this customer to leave a public review or join your loyalty programme.',
+  Angry:      'Escalate to a senior support agent immediately. Offer a resolution within 2 hours to prevent churn.',
+  Frustrated: 'Acknowledge the ongoing issue, provide a clear timeline, and offer a small compensation gesture.',
+  Sad:        'Reach out with empathy. Explore alternatives and ensure this customer feels heard and valued.',
+  Excited:    'Lean into this energy — invite early access to new features or a referral programme.',
+  Neutral:    'No immediate action required. File for record and monitor future interactions.',
+};
+
+const localHistory = [];
+
+// ── INIT: auto-login if token exists ──
+async function init() {
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        loginSuccess(data.user);
+        return;
+      }
+    } catch(e) {}
+    localStorage.removeItem('ml_token');
+    token = null;
+  }
+}
+init();
+
+// ── AUTH TABS ──
+function switchTab(tab) {
+  document.getElementById('loginForm').style.display    = tab === 'login'    ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0) === (tab==='login')));
+  hideAuthMessages();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('authSuccess').style.display = 'none';
+}
+function showAuthSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('authError').style.display = 'none';
+}
+function hideAuthMessages() {
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authSuccess').style.display = 'none';
+}
+
+// ── LOGIN ──
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { showAuthError('Please fill in all fields.'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  document.getElementById('loginBtnText').innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;"></div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { showAuthError(data.message || 'Login failed.'); return; }
+    localStorage.setItem('ml_token', data.token);
+    token = data.token;
+    loginSuccess(data.user);
+  } catch(e) {
+    showAuthError('Cannot reach the server. Is your backend running at ' + API_BASE + '?');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('loginBtnText').textContent = 'Sign in →';
+  }
+}
+
+// ── REGISTER ──
+async function handleRegister() {
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const confirm  = document.getElementById('regConfirm').value;
+  if (!name || !email || !password) { showAuthError('Please fill in all fields.'); return; }
+  if (password !== confirm)         { showAuthError('Passwords do not match.'); return; }
+  if (password.length < 8)          { showAuthError('Password must be at least 8 characters.'); return; }
+
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true;
+  document.getElementById('registerBtnText').innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;"></div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { showAuthError(data.message || 'Registration failed.'); return; }
+    showAuthSuccess('Account created! Signing you in…');
+    localStorage.setItem('ml_token', data.token);
+    token = data.token;
+    setTimeout(() => loginSuccess(data.user), 800);
+  } catch(e) {
+    showAuthError('Cannot reach the server. Is your backend running at ' + API_BASE + '?');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('registerBtnText').textContent = 'Create account →';
+  }
+}
+
+function loginSuccess(user) {
+  currentUser = user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('userName').textContent = user.name.split(' ')[0];
+  document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+  loadHistory();
+}
+
+function handleLogout() {
+  localStorage.removeItem('ml_token');
+  token = null; currentUser = null;
+  localHistory.length = 0;
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'grid';
+  document.getElementById('resultContent').innerHTML = '<div class="result-empty"><div class="big-icon">🎭</div><p style="font-size:0.88rem;">Enter customer feedback and click Detect Emotion</p></div>';
+  showPage('analyze', document.querySelector('nav button'));
+}
+
+// ── NAVIGATION ──
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'history')   renderHistory();
+}
+
+// ── SAMPLE TEXT ──
+function setExample(text) { document.getElementById('inputText').value = text; }
+
+// ── ANALYZE (calls backend → Anthropic) ──
+async function analyzeText() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  document.getElementById('btnContent').innerHTML = '<div class="spinner"></div> Analysing…';
+  document.getElementById('resultContent').innerHTML =
+    '<div class="loading-dots"><span></span><span></span><span></span></div>';
+  document.getElementById('saveIndicator').classList.remove('show');
+
+  try {
+    const response = await fetch(`${API_BASE}/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ text })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      document.getElementById('resultContent').innerHTML =
+        `<div class="error-box">⚠️ ${result.message || 'Analysis failed. Please try again.'}</div>`;
+      return;
+    }
+
+    result.time = new Date().toLocaleTimeString();
+    renderResult(result);
+
+    // Save to backend
+    try {
+      await fetch(`${API_BASE}/analyses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          text:       result.text,
+          emotion:    result.emotion,
+          confidence: result.confidence,
+          keywords:   result.keywords,
+          timestamp:  result.timestamp
+        })
+      });
+      // Add to local history
+      localHistory.unshift(result);
+      const si = document.getElementById('saveIndicator');
+      si.classList.add('show');
+      setTimeout(() => si.classList.remove('show'), 3000);
+    } catch(e) {
+      console.warn('Failed to save to backend:', e);
+    }
+
+  } catch(e) {
+    document.getElementById('resultContent').innerHTML =
+      `<div class="error-box">⚠️ Cannot reach the server. Make sure your backend is running at <strong>${API_BASE}</strong>.</div>`;
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btnContent').textContent = 'Detect Emotion →';
+  }
+}
+
+// ── RENDER RESULT ──
+function renderResult(r) {
+  const em = EMOTIONS[r.emotion] || EMOTIONS.Neutral;
+  const pct = Math.round(r.confidence * 100);
+  const churnClass = em.churn === 'High' ? 'churn-high' : em.churn === 'Medium' ? 'churn-med' : 'churn-low';
+  const kwHtml = (r.keywords||[]).map(k =>
+    `<span style="background:${em.color}1A;border:1px solid ${em.color}44;color:${em.color};border-radius:20px;padding:2px 10px;font-size:0.74rem;">${k}</span>`
+  ).join(' ');
+  document.getElementById('resultContent').innerHTML = `
+    <div class="emotion-badge" style="--e-color:${em.color}">
+      <div class="emotion-icon">${em.emoji}</div>
+      <div><div class="emotion-name">${r.emotion}</div><div class="emotion-sub">${em.desc}</div></div>
+    </div>
+    <div class="conf-bar-wrap">
+      <div class="conf-label"><span>Confidence</span><span>${pct}%</span></div>
+      <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${em.color};"></div></div>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-card"><div class="meta-label">Churn risk</div><div class="meta-value ${churnClass}">${em.churn}</div></div>
+      <div class="meta-card"><div class="meta-label">Analysed at</div><div class="meta-value" style="font-size:0.85rem;">${r.time}</div></div>
+    </div>
+    ${kwHtml ? `<div style="margin-bottom:1.1rem;display:flex;flex-wrap:wrap;gap:6px;">${kwHtml}</div>` : ''}
+    <div class="suggestion-box"><div class="sug-label">💡 Recommended action</div><p>${SUGGESTIONS[r.emotion]}</p></div>`;
+}
+
+// ── HISTORY ──
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/analyses`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      data.analyses.forEach(a => {
+        if (!localHistory.find(h => h.timestamp === a.timestamp)) {
+          localHistory.push({ ...a, time: new Date(a.timestamp).toLocaleTimeString() });
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyContent');
+  if (!localHistory.length) { el.innerHTML = '<div class="hist-empty">Nothing analysed yet.</div>'; return; }
+  const items = localHistory.map(r => {
+    const em = EMOTIONS[r.emotion] || EMOTIONS.Neutral;
+    const snippet = r.text.length > 80 ? r.text.slice(0, 77) + '…' : r.text;
+    const when = r.timestamp ? new Date(r.timestamp).toLocaleString() : r.time;
+    return `<div class="hist-item">
+      <div><div class="hist-text">${snippet}</div><div class="hist-time">${when}</div></div>
+      <div class="hist-right">
+        <span class="emotion-pill" style="background:${em.color}1A;color:${em.color};">${em.emoji} ${r.emotion}</span>
+        <div style="font-size:0.73rem;color:var(--muted);margin-top:4px;">${Math.round(r.confidence*100)}% conf.</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<button class="clear-btn" onclick="clearHistory()">Clear session history</button>` + items;
+}
+
+function clearHistory() { localHistory.length = 0; renderHistory(); }
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const n = localHistory.length;
+  document.getElementById('d-total').textContent = n;
+  if (!n) {
+    document.getElementById('d-pos').textContent = '—';
+    document.getElementById('d-conf').textContent = '—';
+    document.getElementById('barChart').innerHTML = '<div style="color:var(--muted);font-size:0.84rem;">No data yet.</div>';
+    resetDonut();
+    document.getElementById('recentTable').innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:1rem 0;">No analyses yet.</div>';
+    return;
+  }
+  const counts = {}; let totalConf = 0;
+  for (const r of localHistory) { counts[r.emotion] = (counts[r.emotion]||0)+1; totalConf += r.confidence; }
+  const pos = (counts.Happy||0)+(counts.Excited||0);
+  document.getElementById('d-pos').textContent = Math.round(pos/n*100)+'%';
+  document.getElementById('d-conf').textContent = Math.round(totalConf/n*100)+'%';
+  const order = ['Happy','Excited','Neutral','Sad','Frustrated','Angry'];
+  document.getElementById('barChart').innerHTML = order.map(em => {
+    const c = counts[em]||0; if (!c) return '';
+    const pct = Math.round(c/n*100);
+    return `<div class="bar-row"><div class="bar-label">${em}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${EMOTIONS[em].color};"></div></div><div class="bar-pct">${pct}%</div></div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:0.84rem;">No data.</div>';
+  const posN = pos, negN=(counts.Angry||0)+(counts.Frustrated||0)+(counts.Sad||0), neuN=counts.Neutral||0;
+  renderDonut(posN, negN, neuN, n);
+  const rows = localHistory.slice(0,8).map(r => {
+    const em = EMOTIONS[r.emotion]||EMOTIONS.Neutral;
+    const snippet = r.text.length>50 ? r.text.slice(0,47)+'…':r.text;
+    return `<tr><td style="max-width:280px;color:#C4C2D0;">${snippet}</td><td><span class="emotion-pill" style="background:${em.color}1A;color:${em.color};">${em.emoji} ${r.emotion}</span></td><td style="color:var(--muted);">${Math.round(r.confidence*100)}%</td><td style="color:var(--muted);">${r.time}</td></tr>`;
+  }).join('');
+  document.getElementById('recentTable').innerHTML = `<table><thead><tr><th>Text</th><th>Emotion</th><th>Conf.</th><th>Time</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function resetDonut() {
+  document.getElementById('donutSvg').innerHTML = `<circle cx="65" cy="65" r="50" fill="none" stroke="#1C1C24" stroke-width="18"/><text x="65" y="70" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="20" fill="#8C8A9A">—</text>`;
+}
+function renderDonut(pos,neg,neu,total) {
+  const cx=65,cy=65,r=50,sw=18,circ=2*Math.PI*r;
+  const segs=[{val:pos,color:'#2ECC71'},{val:neg,color:'#E74C3C'},{val:neu,color:'#95A5A6'}];
+  let offset=0;
+  const paths=segs.map(s=>{
+    const dash=(s.val/total)*circ, gap=circ-dash;
+    const el=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" style="transform:rotate(-90deg);transform-origin:65px 65px;"/>`;
+    offset+=dash; return el;
+  });
+  document.getElementById('donutSvg').innerHTML=paths.join('')+`<text x="65" y="61" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="18" fill="#F0EEF8">${Math.round(pos/total*100)}%</text><text x="65" y="76" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" fill="#8C8A9A">positive</text>`;
+}
+
+// ── KEYBOARD SHORTCUT ──
+document.getElementById('inputText').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) analyzeText();
+});
+</script>
+</body>
+</html>
