@@ -240,4 +240,16 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ── Start ──
 const PORT = process.env.PORT || 5000;
+
+// Add this at the bottom of server.js, before app.listen()
+
+// Keep Flask warm on Render free tier
+setInterval(async () => {
+  try {
+    const r = await fetch(`${FLASK_BASE}/health`);
+    console.log('💓 Flask ping:', r.status);
+  } catch (e) {
+    console.log('⚠️ Flask ping failed:', e.message);
+  }
+}, 10 * 60 * 1000); // every 10 minutes
 app.listen(PORT, () => console.log(`🔮 MoodLens API running on http://localhost:${PORT}`));
