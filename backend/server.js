@@ -11,7 +11,7 @@ require('dotenv').config();
 const app = express();
 
 // ── Middleware ──
-app.use(cors({ origin: '*' }));          // lock down in production
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // ── MongoDB Connection ──
@@ -23,7 +23,6 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/moodlens')
 //  MODELS
 // ══════════════════════════════════════
 
-// User
 const userSchema = new mongoose.Schema({
   name:      { type: String, required: true, trim: true },
   email:     { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -40,7 +39,6 @@ userSchema.methods.comparePassword = function(candidate) {
 };
 const User = mongoose.model('User', userSchema);
 
-// Analysis
 const analysisSchema = new mongoose.Schema({
   userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   text:       { type: String, required: true },
@@ -79,10 +77,76 @@ function userResponse(user) {
 }
 
 // ══════════════════════════════════════
+//  FLASK HELPER — with retry + timeout
+// ══════════════════════════════════════
+
+const FLASK_BASE = (process.env.FLASK_API_URL || 'http://localhost:5001').replace(/\/$/, '');
+console.log(`🔗 Flask API base: ${FLASK_BASE}`);
+
+// Calls Flask /predict with a timeout. Retries once after 7s if it fails
+// (handles Render free-tier cold start ~30s spin-up)
+async function callFlask(text, retries = 1) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+    const response = await fetch(`${FLASK_BASE}/predict`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ text }),
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Flask responded ${response.status}: ${errText}`);
+    }
+
+    return await response.json();
+
+  } catch (err) {
+    if (err.name === 'AbortError') err = new Error('Flask timed out after 20s');
+
+    if (retries > 0) {
+      console.log(`⚠️  Flask call failed (${err.message}), retrying in 7s...`);
+      await new Promise(r => setTimeout(r, 7000)); // wait 7s for cold start
+      return callFlask(text, retries - 1);
+    }
+
+    throw err;
+  }
+}
+
+// ══════════════════════════════════════
+//  KEEP FLASK WARM (free-tier fix)
+//  Pings Flask /health every 10 minutes
+//  so it never goes to sleep
+// ══════════════════════════════════════
+function startFlaskKeepAlive() {
+  const INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+  const ping = async () => {
+    try {
+      const r = await fetch(`${FLASK_BASE}/health`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      console.log(`💓 Flask keep-alive ping: ${r.status}`);
+    } catch (e) {
+      console.log(`⚠️  Flask keep-alive failed: ${e.message}`);
+    }
+  };
+
+  // Initial ping on startup
+  ping();
+  setInterval(ping, INTERVAL);
+  console.log('⏰ Flask keep-alive started (every 10 min)');
+}
+
+// ══════════════════════════════════════
 //  AUTH ROUTES
 // ══════════════════════════════════════
 
-// POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -104,7 +168,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -123,7 +186,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// GET /api/me  (verify token + return user)
 app.get('/api/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
@@ -135,39 +197,38 @@ app.get('/api/me', authMiddleware, async (req, res) => {
 });
 
 // ══════════════════════════════════════
-//  ANALYZE ROUTE (Python ML Model)
+//  ANALYZE ROUTE
 // ══════════════════════════════════════
 
-// POST /api/analyze  — calls your Python Naive Bayes model via Flask
 app.post('/api/analyze', authMiddleware, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text || !text.trim())
       return res.status(400).json({ message: 'Text is required.' });
 
-    const flaskBase = process.env.FLASK_API_URL || 'http://localhost:5001';
-    const pyResponse = await fetch(`${flaskBase}/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-
-    if (!pyResponse.ok)
-      return res.status(502).json({ message: 'Python model API error. Is flask_api.py running?' });
-
-    const result = await pyResponse.json();
+    let result;
+    try {
+      result = await callFlask(text.trim());
+    } catch (flaskErr) {
+      console.error('❌ Flask call failed:', flaskErr.message);
+      return res.status(502).json({
+        message: `Python model API error: ${flaskErr.message}`,
+        flask_url: FLASK_BASE,
+      });
+    }
 
     return res.json({
       emotion:    result.emotion,
       confidence: result.confidence,
       keywords:   result.keywords || [],
+      model_used: result.model_used || 'unknown',
       text,
       timestamp:  new Date().toISOString(),
     });
 
   } catch (err) {
     console.error('Analyze error:', err.message);
-    return res.status(502).json({ message: 'Cannot reach Python API. Run: python flask_api.py' });
+    return res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -175,7 +236,6 @@ app.post('/api/analyze', authMiddleware, async (req, res) => {
 //  ANALYSIS ROUTES
 // ══════════════════════════════════════
 
-// POST /api/analyses  — save a new analysis
 app.post('/api/analyses', authMiddleware, async (req, res) => {
   try {
     const { text, emotion, confidence, keywords, timestamp } = req.body;
@@ -192,7 +252,6 @@ app.post('/api/analyses', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/analyses  — get user's analyses (most recent first, limit 100)
 app.get('/api/analyses', authMiddleware, async (req, res) => {
   try {
     const analyses = await Analysis.find({ userId: req.userId })
@@ -205,7 +264,6 @@ app.get('/api/analyses', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/analyses  — clear user's analyses
 app.delete('/api/analyses', authMiddleware, async (req, res) => {
   try {
     await Analysis.deleteMany({ userId: req.userId });
@@ -215,7 +273,6 @@ app.delete('/api/analyses', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/analyses/stats  — emotion stats for dashboard
 app.get('/api/analyses/stats', authMiddleware, async (req, res) => {
   try {
     const stats = await Analysis.aggregate([
@@ -232,7 +289,19 @@ app.get('/api/analyses/stats', authMiddleware, async (req, res) => {
 // ══════════════════════════════════════
 //  HEALTH CHECK
 // ══════════════════════════════════════
-app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'MoodLens API' }));
+app.get('/api/health', async (req, res) => {
+  let flaskStatus = 'unreachable';
+  try {
+    const r = await fetch(`${FLASK_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      const data = await r.json();
+      flaskStatus = data.status === 'ok' ? `ok (model: ${data.model_type})` : 'error';
+    }
+  } catch {
+    flaskStatus = 'unreachable';
+  }
+  res.json({ status: 'ok', service: 'MoodLens API', flask_base: FLASK_BASE, flask: flaskStatus });
+});
 
 // ── Serve frontend ──
 const path = require('path');
@@ -240,16 +309,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ── Start ──
 const PORT = process.env.PORT || 5000;
-
-// Add this at the bottom of server.js, before app.listen()
-
-// Keep Flask warm on Render free tier
-setInterval(async () => {
-  try {
-    const r = await fetch(`${FLASK_BASE}/health`);
-    console.log('💓 Flask ping:', r.status);
-  } catch (e) {
-    console.log('⚠️ Flask ping failed:', e.message);
-  }
-}, 10 * 60 * 1000); // every 10 minutes
-app.listen(PORT, () => console.log(`🔮 MoodLens API running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🔮 MoodLens API running on http://localhost:${PORT}`);
+  startFlaskKeepAlive(); // ← start pinging Flask after server is up
+});
