@@ -1,0 +1,96 @@
+{
+  "trained_at": "2026-04-26T10:55:52.476864",
+  "best_model": "Linear SVM",
+  "best_f1": 0.9095,
+  "best_accuracy": 0.911,
+  "total_samples": 20000,
+  "train_size": 16000,
+  "test_size": 4000,
+  "emotions": [
+    "Angry",
+    "Excited",
+    "Frustrated",
+    "Happy",
+    "Sad"
+  ],
+  "datasets": {
+    "REAL": {
+      "name": "Real_Emotions_NLP",
+      "domain": "Multi-domain (NLP Emotions)",
+      "total": 20000,
+      "counts": {
+        "Sad": 5797,
+        "Angry": 2709,
+        "Happy": 8402,
+        "Excited": 719,
+        "Frustrated": 2373
+      }
+    }
+  },
+  "all_results": {
+    "Logistic Regression": {
+      "accuracy": 0.899,
+      "f1": 0.8958,
+      "cv_mean": 0.8904,
+      "cv_std": 0.002
+    },
+    "Naive Bayes": {
+      "accuracy": 0.8157,
+      "f1": 0.8017,
+      "cv_mean": 0.8158,
+      "cv_std": 0.0038
+    },
+    "Linear SVM": {
+      "accuracy": 0.911,
+      "f1": 0.9095,
+      "cv_mean": 0.9104,
+      "cv_std": 0.0025
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "Angry",
+      "Excited",
+      "Frustrated",
+      "Happy",
+      "Sad"
+    ],
+    "matrix": [
+      [
+        454,
+        0,
+        8,
+        38,
+        42
+      ],
+      [
+        2,
+        103,
+        16,
+        21,
+        2
+      ],
+      [
+        26,
+        20,
+        376,
+        25,
+        28
+      ],
+      [
+        6,
+        4,
+        2,
+        1647,
+        21
+      ],
+      [
+        21,
+        4,
+        14,
+        56,
+        1064
+      ]
+    ]
+  }
+}
