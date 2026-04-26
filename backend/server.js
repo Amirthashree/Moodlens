@@ -145,7 +145,8 @@ app.post('/api/analyze', authMiddleware, async (req, res) => {
     if (!text || !text.trim())
       return res.status(400).json({ message: 'Text is required.' });
 
-    const pyResponse = await fetch(process.env.FLASK_API_URL ? process.env.FLASK_API_URL + '/predict' : '$($env:FLASK_API_URL ?? 'http://localhost:5001')/predict', {
+    const flaskBase = process.env.FLASK_API_URL || 'http://localhost:5001';
+    const pyResponse = await fetch(`${flaskBase}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
