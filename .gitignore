@@ -1,9 +1,8 @@
-﻿node_modules/
+node_modules/
 .env
 __pycache__/
 *.pyc
 *.pyo
-*.pkl
 *.pt
 *.csv
 *.zip
