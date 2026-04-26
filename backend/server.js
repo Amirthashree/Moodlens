@@ -145,7 +145,7 @@ app.post('/api/analyze', authMiddleware, async (req, res) => {
     if (!text || !text.trim())
       return res.status(400).json({ message: 'Text is required.' });
 
-    const flaskBase = process.env.FLASK_API_URL || 'http://localhost:5001';
+    const flaskBase = process.env.https://moodlens-h6wo.onrender.com|| 'http://localhost:5001';
     const pyResponse = await fetch(`${flaskBase}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
